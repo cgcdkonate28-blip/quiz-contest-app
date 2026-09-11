@@ -1,0 +1,100 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id            String   @id @default(cuid())
+  uniqueCode    String   @unique // l'ID unique donné après confirmation email
+  nom           String
+  prenom        String
+  username      String   @unique
+  email         String   @unique
+  passwordHash  String
+  tiktokHandle  String
+  emailVerified Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  attempts Attempt[]
+  verificationCodes VerificationCode[]
+}
+
+model Admin {
+  id        String   @id @default(cuid())
+  nom       String
+  prenom    String
+  adminKey  String   @unique
+  createdAt DateTime @default(now())
+}
+
+model Question {
+  id            String  @id @default(cuid())
+  ordre         Int
+  texte         String
+  optionA       String
+  optionB       String
+  optionC       String
+  optionD       String
+  bonneReponse  String // "A", "B", "C" ou "D"
+  tempsImparti  Int     @default(30) // secondes allouées pour cette question
+
+  answerDetails AnswerDetail[]
+}
+
+model Attempt {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  startedAt   DateTime  @default(now())
+  submittedAt DateTime?
+  scoreTotal  Int?
+  tempsTotal  Int? // en secondes
+  status      String    @default("en_cours") // en_cours | termine | invalide | reinitialise
+
+  answerDetails AnswerDetail[]
+
+  @@unique([userId]) // une seule tentative par utilisateur
+}
+
+model AnswerDetail {
+  id             String   @id @default(cuid())
+  attemptId      String
+  attempt        Attempt  @relation(fields: [attemptId], references: [id])
+  questionId     String
+  question       Question @relation(fields: [questionId], references: [id])
+  reponseDonnee  String?
+  correcte       Boolean
+  tempsPris      Int
+  pointsObtenus  Int
+  repondu        Boolean  @default(false)
+
+  @@unique([attemptId, questionId])
+}
+
+model GameSettings {
+  id               String    @id @default(cuid())
+  dateHeureDebut   DateTime?
+  dateHeureFin     DateTime?
+  resultatsPublies Boolean   @default(false)
+}
+
+model VerificationCode {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  code      String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model AdminMessage {
+  id        String   @id @default(cuid())
+  texte     String
+  createdAt DateTime @default(now())
+}
+
